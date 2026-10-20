@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bible Bot | Study Scripture Together</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f5f2eb;color:#24362f}
+header{background:#233f36;color:white;padding:22px 20px;text-align:center}
+header h1{margin:0;font-family:Georgia,serif;font-size:34px}
+header p{color:#d7dfd7;margin-bottom:0}
+main{max-width:650px;margin:auto;padding:24px 16px}
+h2{font-family:Georgia,serif;font-size:27px;margin-top:8px}
+.card{background:white;border:1px solid #e0ded5;border-radius:15px;padding:22px;margin:18px 0;box-shadow:0 3px 12px #00000008}
+label{display:block;font-weight:bold;margin:18px 0 8px}
+input,select,textarea{width:100%;padding:13px;border:1px solid #bbbfb9;border-radius:8px;font:inherit;background:white;color:#24362f}
+textarea{min-height:155px;resize:vertical}
+button{border:0;border-radius:9px;background:#315b49;color:white;padding:14px 20px;font-size:16px;font-weight:bold;cursor:pointer}
+button.secondary{background:#e8e9e2;color:#234136}
+.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.hidden{display:none}
+.small{font-size:13px;color:#65716b}
+#message{line-height:1.65;background:#f1f5ed;padding:15px;border-radius:10px}
+footer{text-align:center;padding:25px;color:#69736d;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<h1>Bible Bot</h1>
+<p>Discover Scripture. Grow in Faith. Study Together.</p>
+</header>
+<main>
+<section class="card" id="welcome">
+<h2>Welcome to Bible Bot</h2>
+<p>What would you like to study today?</p>
+<label for="mode">Study setting</label>
+<select id="mode">
+<option value="individual">Individual Study</option>
+<option value="group">Group Study</option>
+</select>
+<label for="approach">Choose your approach</label>
+<select id="approach" onchange="updateFields()">
+<option value="passage">I have a Bible passage</option>
+<option value="topic">I have a topic</option>
+<option value="surprise">Pick something for me</option>
+</select>
+<div id="entry">
+<label for="subject" id="subjectLabel">Book, chapter, and verses</label>
+<input id="subject" placeholder="Example: Ephesians 1:3-14">
+</div>
+<label for="translation">Preferred translation</label>
+<select id="translation">
+<option>NIV</option>
+<option>KJV</option>
+<option>ESV</option>
+<option>NKJV</option>
+<option>NLT</option>
+</select>
+<div class="buttons"><button onclick="startStudy()">Begin Bible Study</button></div>
+</section>
+<section class="card hidden" id="study">
+<h2 id="studyTitle">Your Bible Study</h2>
+<p class="small" id="studyDetails"></p>
+<div id="message"></div>
+<div class="buttons">
+<button onclick="openPassage()">Open Scripture</button>
+<button class="secondary" onclick="newStudy()">New Study</button>
+</div>
+<label for="notes">Your reflections and study notes</label>
+<textarea id="notes" placeholder="What does this passage mean to you? What questions do you have?"></textarea>
+<div class="buttons"><button onclick="saveNotes()">Save Notes on This Device</button></div>
+<p class="small" id="saveStatus"></p>
+</section>
+<section class="card">
+<h2>My Study Journal</h2>
+<p class="small">These notes are stored in this browser on this device, not in an online account.</p>
+<div id="journal"></div>
+</section>
+</main>
+<footer>Bible Bot &bull; Growing together through God's Word</footer>
+<script>
+let current={};
+const $=id=>document.getElementById(id);
+function updateFields(){
+let type=$("approach").value;
+$("entry").classList.toggle("hidden",type==="surprise");
+$("subjectLabel").textContent=type==="topic"?"What topic would you like to explore?":"Book, chapter, and verses";
+$("subject").placeholder=type==="topic"?"Example: business, money, leadership":"Example: Ephesians 1:3-14";
+}
+function startStudy(){
+let type=$("approach").value;
+let subject=$("subject").value.trim();
+if(type!=="surprise"&&!subject){alert("Please enter a passage or topic.");return}
+if(type==="surprise"){type="passage";subject="Deuteronomy 8:1-20"}
+current={type,subject,mode:$("mode").value,translation:$("translation").value};
+$("welcome").classList.add("hidden");
+$("study").classList.remove("hidden");
+$("studyTitle").textContent=type==="topic"?"Exploring: "+subject:subject;
+$("studyDetails").textContent=current.mode+" study | "+current.translation;
+$("message").textContent=type==="topic"?
+"Start by thinking about what the Bible teaches on "+subject+". What is your first question? The interactive AI study guide will be connected in a later version.":
+"Before exploring this passage, what do you already know about its context? Read the passage using the Scripture button, then write what stands out to you.";
+$("notes").value="";
+$("saveStatus").textContent="";
+window.scrollTo(0,0);
+}
+function openPassage(){
+let q=current.type==="topic"?current.subject+" Bible verses":current.subject;
+window.open("https://www.biblegateway.com/quicksearch/?quicksearch="+encodeURIComponent(q)+"&version="+encodeURIComponent(current.translation),"_blank","noopener");
+}
+function newStudy(){
+$("study").classList.add("hidden");$("welcome").classList.remove("hidden");
+window.scrollTo(0,0);
+}
+function getJournal(){
+try{return JSON.parse(localStorage.getItem("bibleBotJournal")||"[]")}catch(e){return []}
+}
+function saveNotes(){
+let notes=$("notes").value.trim();
+if(!notes){alert("Write some notes before saving.");return}
+let journal=getJournal();
+journal.unshift({...current,notes,date:new Date().toLocaleDateString()});
+try{
+localStorage.setItem("bibleBotJournal",JSON.stringify(journal));
+$("saveStatus").textContent="Saved on this device.";
+renderJournal();
+}catch(e){$("saveStatus").textContent="Unable to save here. Please copy your notes for safekeeping."}
+}
+function renderJournal(){
+let area=$("journal");area.replaceChildren();
+let items=getJournal();
+if(!items.length){area.textContent="Your saved reflections will appear here.";return}
+items.forEach(item=>{
+let box=document.createElement("div");
+box.style.cssText="border-top:1px solid #e1e3da;padding:14px 0";
+let heading=document.createElement("strong");
+heading.textContent=item.subject+" — "+item.date;
+let paragraph=document.createElement("p");
+paragraph.textContent=item.notes;
+paragraph.style.whiteSpace="pre-wrap";
+box.append(heading,paragraph);area.appendChild(box);
+});
+}
+renderJournal();
+</script>
+</body>
+</html>
